@@ -1,0 +1,5 @@
+{
+  "name": "SalesPulse Analytics Dashboard",
+  "description": "An interactive dashboard for visualizing sales performance, product trends, and payment distributions.",
+  "requestFramePermissions": []
+}

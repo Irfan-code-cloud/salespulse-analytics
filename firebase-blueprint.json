@@ -1,0 +1,128 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Represents a user's profile and settings.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique Firebase Auth UID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's unique handle."
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "The user's profile picture URL or base64 data."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"],
+          "description": "The user's role in the system."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the user profile was created."
+        }
+      },
+      "required": ["uid", "displayName", "email", "role"]
+    },
+    "Task": {
+      "title": "Sales Task",
+      "description": "A task for the user to complete.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique task ID."
+        },
+        "text": {
+          "type": "string",
+          "description": "The task description."
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Whether the task is completed."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the task was created."
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The optional due date for the task."
+        }
+      },
+      "required": ["text", "completed", "createdAt"]
+    },
+    "Order": {
+      "title": "Sales Order",
+      "description": "A record of a sales transaction.",
+      "type": "object",
+      "properties": {
+        "orderNumber": {
+          "type": "string",
+          "description": "The unique order identifier."
+        },
+        "product": {
+          "type": "string",
+          "description": "The name of the product sold."
+        },
+        "price": {
+          "type": "number",
+          "description": "The sale price."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "The date of the sale (YYYY-MM-DD)."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The method used for payment."
+        },
+        "city": {
+          "type": "string",
+          "description": "The city where the sale occurred."
+        },
+        "lat": {
+          "type": "number",
+          "description": "Latitude of the city."
+        },
+        "lng": {
+          "type": "number",
+          "description": "Longitude of the city."
+        }
+      },
+      "required": ["orderNumber", "product", "price", "date", "paymentMethod", "city"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents stored by their Auth UID."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Tasks for a specific user."
+    },
+    "/users/{userId}/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Sales orders for a specific user."
+    }
+  }
+}

@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+@import "react-day-picker/dist/style.css";
+
+@theme {
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  html {
+    /* Fluid font size: 14px at 320px, 16px at 1280px */
+    font-size: clamp(0.875rem, 0.8333rem + 0.208vw, 1rem);
+  }
+
+  h1 { font-size: clamp(2rem, 1.5rem + 2.5vw, 3.5rem); }
+  h2 { font-size: clamp(1.5rem, 1.25rem + 1.25vw, 2.25rem); }
+  h3 { font-size: clamp(1.125rem, 1rem + 0.625vw, 1.5rem); }
+}
+
+/* Hide default date picker icon in Chrome/Safari/Edge */
+.custom-date-input::-webkit-calendar-picker-indicator {
+  background: transparent;
+  bottom: 0;
+  color: transparent;
+  cursor: pointer;
+  height: auto;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: auto;
+}
+
+/* Custom styling for react-day-picker dropdowns */
+.rdp-dropdown {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(20, 20, 20, 0.1);
+  background-color: rgba(20, 20, 20, 0.05);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #141414;
+  cursor: pointer;
+  outline: none;
+  margin-right: 4px;
+}
+
+.rdp-caption_dropdowns {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}

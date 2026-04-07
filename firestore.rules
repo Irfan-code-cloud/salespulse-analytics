@@ -1,0 +1,118 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (Auth UID)
+    // Fields:
+    //   - uid: string (required, immutable) - The user's Auth UID
+    //   - displayName: string (required, max 50 chars) - The user's full name
+    //   - email: string (required, email format) - The user's email address
+    //   - role: string (required, enum: ['admin', 'user']) - The user's role
+    //   - createdAt: timestamp (optional) - When the profile was created
+    //
+    // Collection: users/{userId}/tasks
+    // Document ID: {taskId}
+    // Fields:
+    //   - text: string (required, max 200 chars) - The task description
+    //   - completed: boolean (required) - Completion status
+    //   - createdAt: timestamp (required) - Creation time
+    //   - dueDate: timestamp (optional) - Due date
+    //
+    // Collection: users/{userId}/orders
+    // Document ID: {orderId}
+    // Fields:
+    //   - orderNumber: string (required)
+    //   - product: string (required)
+    //   - price: number (required)
+    //   - date: string (required)
+    //   - paymentMethod: string (required)
+    //   - city: string (required)
+    //   - lat: number (optional)
+    //   - lng: number (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "kk9857853@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'role']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 50 &&
+             (!('username' in data) || (data.username is string && data.username.size() >= 3 && data.username.size() <= 20)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 500000)) &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['admin', 'user'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Users can read their own profile, or admins can read any profile
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can create their own profile if it's valid
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      
+      // Users can update their own displayName, but not their role or email unless they are an admin
+      allow update: if (isOwner(userId) && 
+                        isValidUser(request.resource.data) && 
+                        request.resource.data.role == resource.data.role &&
+                        request.resource.data.email == resource.data.email) || 
+                       isAdmin();
+    }
+
+    match /users/{userId}/tasks/{taskId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && 
+                      request.resource.data.keys().hasAll(['text', 'completed', 'createdAt']) &&
+                      request.resource.data.keys().hasOnly(['text', 'completed', 'createdAt', 'dueDate', 'priority']) &&
+                      request.resource.data.text is string &&
+                      request.resource.data.text.size() > 0 &&
+                      request.resource.data.text.size() <= 200 &&
+                      request.resource.data.completed == false &&
+                      request.resource.data.createdAt == request.time &&
+                      (!('dueDate' in request.resource.data) || request.resource.data.dueDate is timestamp) &&
+                      (!('priority' in request.resource.data) || (request.resource.data.priority in ['High', 'Medium', 'Low']));
+      allow update: if isOwner(userId) && 
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['completed', 'priority']) &&
+                      (!('completed' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.completed is bool) &&
+                      (!('priority' in request.resource.data.diff(resource.data).affectedKeys()) || (request.resource.data.priority in ['High', 'Medium', 'Low']));
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/orders/{orderId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
