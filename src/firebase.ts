@@ -42,8 +42,20 @@ const getFirebaseConfig = () => {
 };
 
 const firebaseConfig = getFirebaseConfig();
-// Prioritize environment variable for database ID in production environments like Vercel
-const rawDatabaseId = getEnv('VITE_FIREBASE_FIRESTORE_DATABASE_ID') || (firebaseConfigJson as any).firestoreDatabaseId;
+
+// Prioritize environment variable but add a safety check for common misconfigurations
+const envDatabaseId = getEnv('VITE_FIREBASE_FIRESTORE_DATABASE_ID');
+const jsonDatabaseId = (firebaseConfigJson as any).firestoreDatabaseId;
+
+let rawDatabaseId = envDatabaseId || jsonDatabaseId;
+
+// If the environment variable is accidentally set to the Project ID (common mistake), 
+// and we have a better-looking ID in the JSON config, use the JSON one instead.
+if (envDatabaseId && envDatabaseId === firebaseConfig.projectId && jsonDatabaseId && jsonDatabaseId !== firebaseConfig.projectId) {
+  console.warn('⚠️ Detected VITE_FIREBASE_FIRESTORE_DATABASE_ID matches Project ID. Automatically falling back to the correct AI Studio Database ID.');
+  rawDatabaseId = jsonDatabaseId;
+}
+
 const firestoreDatabaseId = (rawDatabaseId && rawDatabaseId !== 'undefined' && rawDatabaseId !== 'null') ? rawDatabaseId : '(default)';
 
 export enum OperationType {
