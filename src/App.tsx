@@ -1930,14 +1930,7 @@ export default function App() {
                 Daily Revenue
               </div>
             </div>
-            <div className="h-[18rem] sm:h-[22rem] w-full relative overflow-hidden">
-              <motion.div
-                initial={{ clipPath: 'inset(0 100% 0 0)' }}
-                whileInView={{ clipPath: 'inset(0 0% 0 0)' }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 1.5, ease: [0.21, 0.47, 0.32, 0.98], delay: 0.2 }}
-                className="w-full h-full"
-              >
+            <div className="h-[18rem] sm:h-[22rem] w-full relative">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <AreaChart data={revenueByDate} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                     <defs>
@@ -2002,11 +1995,12 @@ export default function App() {
                       fillOpacity={1} 
                       fill="url(#colorValue)" 
                       activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2, fill: '#141414' }}
-                      isAnimationActive={false}
+                      isAnimationActive={true}
+                      animationDuration={1500}
+                      animationEasing="ease-out"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              </motion.div>
             </div>
           </motion.div>
 
