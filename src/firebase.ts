@@ -43,7 +43,8 @@ const getFirebaseConfig = () => {
 
 const firebaseConfig = getFirebaseConfig();
 // Prioritize environment variable for database ID in production environments like Vercel
-const firestoreDatabaseId = getEnv('VITE_FIREBASE_FIRESTORE_DATABASE_ID') || (firebaseConfigJson as any).firestoreDatabaseId;
+const rawDatabaseId = getEnv('VITE_FIREBASE_FIRESTORE_DATABASE_ID') || (firebaseConfigJson as any).firestoreDatabaseId;
+const firestoreDatabaseId = (rawDatabaseId && rawDatabaseId !== 'undefined' && rawDatabaseId !== 'null') ? rawDatabaseId : '(default)';
 
 export enum OperationType {
   CREATE = 'create',
@@ -108,13 +109,13 @@ export const auth = getAuth(app);
 // Initialize Firestore with the specific database ID
 console.log('Initializing Firestore...');
 console.log('Project ID:', firebaseConfig.projectId);
-console.log('Database ID:', firestoreDatabaseId || '(default)');
+console.log('Database ID:', firestoreDatabaseId);
 
 if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'undefined') {
   console.error('CRITICAL: Firebase API Key is missing. Check your Vercel Environment Variables.');
 }
 
-export const db = getFirestore(app, firestoreDatabaseId || '(default)');
+export const db = getFirestore(app, firestoreDatabaseId);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
 
