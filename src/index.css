@@ -34,21 +34,46 @@
 }
 
 /* Custom styling for react-day-picker dropdowns */
+.rdp {
+  --rdp-cell-size: 30px;
+  --rdp-accent-color: #141414;
+  --rdp-background-color: #f3f4f6;
+  margin: 0;
+}
+
 .rdp-dropdown {
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 6px;
   border: 1px solid rgba(20, 20, 20, 0.1);
-  background-color: rgba(20, 20, 20, 0.05);
-  font-size: 0.875rem;
-  font-weight: 600;
+  background-color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
   color: #141414;
   cursor: pointer;
   outline: none;
-  margin-right: 4px;
+  transition: all 0.2s;
+}
+
+.rdp-dropdown:hover {
+  background-color: rgba(20, 20, 20, 0.05);
 }
 
 .rdp-caption_dropdowns {
   display: flex;
   gap: 4px;
-  margin-bottom: 8px;
+  align-items: center;
+}
+
+.rdp-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: rgba(20, 20, 20, 0.05);
+}
+
+.rdp-day_selected, .rdp-day_selected:hover {
+  background-color: #141414 !important;
+  color: white !important;
 }
