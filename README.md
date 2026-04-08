@@ -73,6 +73,12 @@ This project uses **Firestore Security Rules** to ensure that:
 
 Make sure to deploy the `firestore.rules` file to your Firebase project.
 
+## 👤 Author
+
+**Irfan Khattak**
+- GitHub: [Irfan-code-cloud](https://github.com/Irfan-code-cloud)
+- LinkedIn: [Irfan Khattak](www.linkedin.com/in/irfan-khattak-00b847251)
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
