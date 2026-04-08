@@ -47,11 +47,11 @@ An interactive and professional dashboard for visualizing sales performance, pro
    ```
 
 3. **Environment Configuration:**
-   - Copy the `.env.example` file to a new file named `.env`:
+   Copy the `.env.example` file to a new file named `.env`:
      ```bash
      cp .env.example .env
      ```
-   - Open `.env` and fill in your Firebase project credentials from the [Firebase Console](https://console.firebase.google.com/).
+   Open `.env` and fill in your Firebase project credentials from the [Firebase Console](https://console.firebase.google.com/).
 
 4. **Run the development server:**
    ```bash
