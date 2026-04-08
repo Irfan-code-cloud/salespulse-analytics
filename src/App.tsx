@@ -217,7 +217,7 @@ const TaskForm = React.memo(({ onAddTask, isQuotaExceeded }: { onAddTask: (text:
   };
 
   return (
-    <form onSubmit={handleSubmit} className={`flex flex-col gap-[0.75rem] mb-[1.5rem] relative z-50 ${isQuotaExceeded ? 'opacity-60 grayscale' : ''}`}>
+    <form onSubmit={handleSubmit} className={`flex flex-col gap-[0.75rem] mb-[1.5rem] relative z-50 overflow-visible ${isQuotaExceeded ? 'opacity-60 grayscale' : ''}`}>
       <input 
         type="text" 
         value={text}
@@ -243,15 +243,16 @@ const TaskForm = React.memo(({ onAddTask, isQuotaExceeded }: { onAddTask: (text:
             value={dueDate} 
             onChange={setDueDate} 
             disabled={isQuotaExceeded}
+            align="right"
           />
         </div>
       </div>
       <button 
         type="submit"
         disabled={!text.trim() || isQuotaExceeded}
-        className="w-full px-[1.25rem] py-[0.75rem] bg-[#141414] text-white rounded-[0.5rem] font-bold text-[0.875rem] hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-[0.5rem] whitespace-nowrap disabled:cursor-not-allowed"
+        className="w-full px-[1.25rem] py-[1rem] sm:py-[0.75rem] bg-[#141414] text-white rounded-[0.75rem] font-bold text-[0.875rem] hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-[0.5rem] whitespace-nowrap disabled:cursor-not-allowed active:scale-[0.98]"
       >
-        <Plus className="w-[1rem] h-[1rem]" />
+        <Plus className="w-[1.125rem] h-[1.125rem] sm:w-[1rem] sm:h-[1rem]" />
         <span>{isQuotaExceeded ? 'Quota Exceeded' : 'Add Task'}</span>
       </button>
     </form>
@@ -359,11 +360,24 @@ export default function App() {
       return;
     }
 
-    const apiKey = import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfigJson.apiKey;
+    const apiKey = (import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfigJson.apiKey || '').replace(/[^a-zA-Z0-9-_]/g, '').trim();
     const clientId = import.meta.env.VITE_GOOGLE_DRIVE_CLIENT_ID;
+    const projectId = firebaseConfigJson.projectId;
+
+    // In AI Studio iframes, we need to be very specific about the origin
+    const origin = window.location.protocol + '//' + window.location.host;
+
+    console.log('--- Google Picker Iframe Debug ---');
+    console.log('API Key:', apiKey.substring(0, 10) + '...');
+    console.log('Project ID:', projectId);
+    console.log('Detected Origin:', origin);
+    console.log('---------------------------');
 
     if (!clientId) {
-      setToast({ message: 'Google Drive Client ID is not configured. Please check your environment variables.', type: 'error' });
+      setToast({ 
+        message: 'Google Drive Client ID is missing. Please add VITE_GOOGLE_DRIVE_CLIENT_ID to your Vercel environment variables.', 
+        type: 'error' 
+      });
       return;
     }
 
@@ -418,10 +432,10 @@ export default function App() {
 
     const picker = new pickerApi.PickerBuilder()
       .enableFeature(pickerApi.Feature.NAV_HIDDEN)
-      .enableFeature(pickerApi.Feature.MULTISELECT_ENABLED)
       .setDeveloperKey(apiKey)
-      .setAppId(firebaseConfigJson.appId)
+      .setAppId(projectId)
       .setOAuthToken(token)
+      .setOrigin(origin)
       .addView(view)
       .setCallback(pickerCallback)
       .build();
@@ -1299,7 +1313,7 @@ export default function App() {
                 setAuthMode(authMode === 'login' ? 'signup' : 'login');
                 setAuthError(null);
               }}
-              className="text-[0.875rem] font-bold text-[#141414]/60 hover:text-[#141414] transition-colors"
+              className="text-[1rem] sm:text-[0.875rem] font-bold text-[#141414]/60 hover:text-[#141414] transition-colors py-[0.5rem]"
             >
               {authMode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
             </button>
@@ -1420,14 +1434,14 @@ export default function App() {
                 <button 
                   disabled={isClearing}
                   onClick={() => setIsClearModalOpen(false)}
-                  className="flex-1 px-[1rem] py-[0.75rem] bg-[#141414]/5 text-[#141414] rounded-[0.5rem] font-bold hover:bg-[#141414]/10 transition-all disabled:opacity-50"
+                  className="flex-1 px-[1rem] py-[1rem] sm:py-[0.75rem] bg-[#141414]/5 text-[#141414] rounded-[0.75rem] font-bold hover:bg-[#141414]/10 transition-all disabled:opacity-50 active:scale-[0.98]"
                 >
                   Cancel
                 </button>
                 <button 
                   disabled={isClearing}
                   onClick={handleClearData}
-                  className="flex-1 px-[1rem] py-[0.75rem] bg-red-600 text-white rounded-[0.5rem] font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-[0.5rem]"
+                  className="flex-1 px-[1rem] py-[1rem] sm:py-[0.75rem] bg-red-600 text-white rounded-[0.75rem] font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 flex items-center justify-center gap-[0.5rem] active:scale-[0.98]"
                 >
                   {isClearing ? (
                     <>
@@ -1435,7 +1449,10 @@ export default function App() {
                       <span>Clearing...</span>
                     </>
                   ) : (
-                    <span>Yes, Clear All</span>
+                    <>
+                      <Trash2 className="w-[1rem] h-[1rem]" />
+                      <span>Delete All</span>
+                    </>
                   )}
                 </button>
               </div>
@@ -1515,7 +1532,7 @@ export default function App() {
                 <div className="pt-[0.5rem] flex gap-[0.75rem]">
                   <button 
                     onClick={handleUpdateProfile}
-                    className="flex-1 px-[1rem] py-[0.75rem] bg-[#141414] text-white rounded-[0.5rem] font-bold hover:opacity-90 transition-all"
+                    className="flex-1 px-[1rem] py-[1rem] sm:py-[0.75rem] bg-[#141414] text-white rounded-[0.75rem] font-bold hover:opacity-90 transition-all active:scale-[0.98]"
                   >
                     Save Changes
                   </button>
@@ -1524,7 +1541,7 @@ export default function App() {
                       setIsProfileModalOpen(false);
                       setNewPhoto(null);
                     }}
-                    className="px-[1rem] py-[0.75rem] bg-[#141414]/5 text-[#141414] rounded-[0.5rem] font-bold hover:bg-[#141414]/10 transition-all"
+                    className="px-[1rem] py-[1rem] sm:py-[0.75rem] bg-[#141414]/5 text-[#141414] rounded-[0.75rem] font-bold hover:bg-[#141414]/10 transition-all active:scale-[0.98]"
                   >
                     Cancel
                   </button>
@@ -1612,17 +1629,17 @@ export default function App() {
                   setIsProfileModalOpen(true);
                   setNewPhoto(null);
                 }}
-                className="p-[0.5rem] hover:bg-[#141414]/5 rounded-full transition-colors group"
+                className="p-[0.75rem] sm:p-[0.5rem] hover:bg-[#141414]/5 rounded-full transition-colors group"
                 title="Profile Settings"
               >
-                <Settings className="w-[1.125rem] h-[1.125rem] text-[#141414]/40 group-hover:text-[#141414]" />
+                <Settings className="w-[1.25rem] h-[1.25rem] sm:w-[1.125rem] sm:h-[1.125rem] text-[#141414]/40 group-hover:text-[#141414]" />
               </button>
               <button 
                 onClick={logout}
-                className="p-[0.5rem] hover:bg-red-50 rounded-full transition-colors group"
+                className="p-[0.75rem] sm:p-[0.5rem] hover:bg-red-50 rounded-full transition-colors group"
                 title="Logout"
               >
-                <LogOut className="w-[1.125rem] h-[1.125rem] text-[#141414]/40 group-hover:text-red-600" />
+                <LogOut className="w-[1.25rem] h-[1.25rem] sm:w-[1.125rem] sm:h-[1.125rem] text-[#141414]/40 group-hover:text-red-600" />
               </button>
             </div>
           </div>
@@ -1788,114 +1805,119 @@ export default function App() {
             </div>
           )}
         </AnimatePresence>
+        {/* Dashboard Header & Actions */}
         <motion.div 
           layout
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="mb-[1.5rem] sm:mb-[2rem] flex flex-col lg:flex-row justify-between items-start lg:items-center gap-[1rem]"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-[2rem] flex flex-col gap-[1.5rem] relative z-50"
         >
-          <div className="w-full lg:w-auto">
-            <h2 className="text-[1.5rem] sm:text-[2.25rem] font-bold tracking-tight mb-[0.25rem] sm:mb-[0.5rem]">Dashboard Overview</h2>
-            <p className="text-[#141414]/60 text-[0.875rem] sm:text-[1rem]">Welcome back. Here's what's happening with your sales today.</p>
-          </div>
-          <div className="flex flex-col sm:flex-row flex-wrap items-center gap-[0.5rem] sm:gap-[0.75rem] w-full lg:w-auto">
-            {allOrders.length > 0 && (
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-[1rem]">
+            <div>
+              <h2 className="text-[1.75rem] sm:text-[2.25rem] font-bold tracking-tight mb-[0.25rem]">Dashboard Overview</h2>
+              <p className="text-[#141414]/60 text-[0.875rem] sm:text-[1rem]">Welcome back. Here's what's happening with your sales today.</p>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-[0.75rem] w-full lg:w-auto">
               <button 
-                onClick={() => setIsClearModalOpen(true)}
-                disabled={isQuotaExceeded}
-                className={`w-full sm:w-auto flex-1 sm:flex-none flex items-center justify-center gap-[0.5rem] px-[0.75rem] sm:px-[1rem] py-[0.6rem] sm:py-[0.75rem] bg-red-50 text-red-600 border border-red-100 rounded-[0.5rem] font-bold text-[0.75rem] sm:text-[0.875rem] hover:bg-red-100 transition-colors shadow-sm whitespace-nowrap ${isQuotaExceeded ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={handleDownload}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-[0.5rem] px-[1.25rem] py-[0.75rem] bg-[#141414] text-white rounded-[0.75rem] font-bold text-[0.875rem] hover:opacity-90 active:scale-[0.95] transition-all shadow-md whitespace-nowrap"
               >
-                <Trash2 className="w-[0.875rem] h-[0.875rem] sm:w-[1rem] sm:h-[1rem]" />
-                <span>Clear</span>
+                <Download className="w-[1rem] h-[1rem]" />
+                <span>Export Data</span>
               </button>
-            )}
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isQuotaExceeded}
-              className={`w-full sm:w-auto flex-1 sm:flex-none flex items-center justify-center gap-[0.5rem] px-[0.75rem] sm:px-[1rem] py-[0.6rem] sm:py-[0.75rem] bg-white border border-[#141414]/10 rounded-[0.5rem] font-bold text-[0.75rem] sm:text-[0.875rem] hover:bg-[#141414]/5 transition-colors shadow-sm whitespace-nowrap ${isQuotaExceeded ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <Upload className="w-[0.875rem] h-[0.875rem] sm:w-[1rem] sm:h-[1rem]" />
-              <span>Upload CSV</span>
-            </button>
-            <button 
-              onClick={handleGoogleDriveUpload}
-              disabled={isQuotaExceeded || isAuthInProgress}
-              className={`w-full sm:w-auto flex-1 sm:flex-none flex items-center justify-center gap-[0.5rem] px-[0.75rem] sm:px-[1rem] py-[0.6rem] sm:py-[0.75rem] bg-white border border-[#141414]/10 rounded-[0.5rem] font-bold text-[0.75rem] sm:text-[0.875rem] hover:bg-[#141414]/5 transition-colors shadow-sm whitespace-nowrap ${isQuotaExceeded || isAuthInProgress ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {isAuthInProgress ? (
-                <Loader2 className="w-[0.875rem] h-[0.875rem] sm:w-[1rem] sm:h-[1rem] animate-spin" />
-              ) : (
-                <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_48dp.png" className="w-[0.875rem] h-[0.875rem] sm:w-[1rem] sm:h-[1rem]" alt="Google Drive" />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isQuotaExceeded}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-[0.5rem] px-[1.25rem] py-[0.75rem] bg-white border border-[#141414]/10 rounded-[0.75rem] font-bold text-[0.875rem] hover:bg-[#141414]/5 transition-all active:scale-[0.95] shadow-sm whitespace-nowrap ${isQuotaExceeded ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Upload className="w-[1rem] h-[1rem]" />
+                <span>Upload CSV</span>
+              </button>
+              <button 
+                onClick={handleGoogleDriveUpload}
+                disabled={isQuotaExceeded || isAuthInProgress}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-[0.5rem] px-[1.25rem] py-[0.75rem] bg-white border border-[#141414]/10 rounded-[0.75rem] font-bold text-[0.875rem] hover:bg-[#141414]/5 transition-all active:scale-[0.95] shadow-sm whitespace-nowrap ${isQuotaExceeded || isAuthInProgress ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isAuthInProgress ? (
+                  <Loader2 className="w-[1rem] h-[1rem] animate-spin" />
+                ) : (
+                  <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_48dp.png" className="w-[1rem] h-[1rem]" alt="Google Drive" />
+                )}
+                <span>Drive</span>
+              </button>
+              {allOrders.length > 0 && (
+                <button 
+                  onClick={() => setIsClearModalOpen(true)}
+                  disabled={isQuotaExceeded}
+                  className={`p-[0.75rem] bg-red-50 text-red-600 border border-red-100 rounded-[0.75rem] hover:bg-red-100 transition-all active:scale-[0.95] shadow-sm ${isQuotaExceeded ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title="Clear All Data"
+                >
+                  <Trash2 className="w-[1.125rem] h-[1.125rem]" />
+                </button>
               )}
-              <span>{isAuthInProgress ? 'Connecting...' : 'Google Drive'}</span>
-            </button>
-            <button 
-              onClick={handleDownload}
-              className="w-full sm:w-auto flex-1 sm:flex-none flex items-center justify-center gap-[0.5rem] px-[0.75rem] sm:px-[1rem] py-[0.6rem] sm:py-[0.75rem] bg-[#141414] text-white rounded-[0.5rem] font-bold text-[0.75rem] sm:text-[0.875rem] hover:opacity-80 active:scale-[0.98] transition-all shadow-sm whitespace-nowrap"
-            >
-              <Download className="w-[0.875rem] h-[0.875rem] sm:w-[1rem] sm:h-[1rem]" />
-              <span>Export</span>
-            </button>
+            </div>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="bg-[#141414]/5 p-[0.75rem] sm:p-[1rem] rounded-[1rem] border border-[#141414]/5">
+            <div className="flex flex-col gap-[0.75rem]">
+              <div className="flex items-center gap-[0.5rem] mb-[0.25rem]">
+                <Filter className="w-[0.875rem] h-[0.875rem] text-[#141414]/40" />
+                <span className="text-[0.7rem] font-bold uppercase tracking-widest text-[#141414]/40">Filter Results</span>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[0.75rem]">
+                <div className="relative col-span-1">
+                  <select 
+                    className="w-full appearance-none pl-[1rem] pr-[2.5rem] py-[0.75rem] bg-white border border-transparent rounded-[0.75rem] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#141414]/5 cursor-pointer text-[0.875rem] font-bold transition-all hover:border-[#141414]/10"
+                    value={productFilter}
+                    onChange={(e) => setProductFilter(e.target.value)}
+                  >
+                    {products.map(p => <option key={p} value={p}>{p === 'All' ? 'All Products' : p}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-[0.75rem] top-1/2 -translate-y-1/2 w-[1rem] h-[1rem] pointer-events-none opacity-40" />
+                </div>
+
+                <div className="relative col-span-1">
+                  <select 
+                    className="w-full appearance-none pl-[1rem] pr-[2.5rem] py-[0.75rem] bg-white border border-transparent rounded-[0.75rem] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#141414]/5 cursor-pointer text-[0.875rem] font-bold transition-all hover:border-[#141414]/10"
+                    value={datePreset}
+                    onChange={(e) => handlePresetChange(e.target.value)}
+                  >
+                    <option value="All">All Time</option>
+                    <option value="Last 7 Days">Last 7 Days</option>
+                    <option value="This Month">This Month</option>
+                    <option value="Last Month">Last Month</option>
+                    <option value="Custom">Custom Range</option>
+                  </select>
+                  <ChevronDown className="absolute right-[0.75rem] top-1/2 -translate-y-1/2 w-[1rem] h-[1rem] pointer-events-none opacity-40" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-[0.75rem] sm:col-span-2">
+                  <ModernDatePicker 
+                    label="From" 
+                    value={dateRange.start} 
+                    onChange={(date) => {
+                      setDateRange(prev => ({ ...prev, start: date }));
+                      setDatePreset('Custom');
+                    }} 
+                    align="left"
+                  />
+                  <ModernDatePicker 
+                    label="To" 
+                    value={dateRange.end} 
+                    onChange={(date) => {
+                      setDateRange(prev => ({ ...prev, end: date }));
+                      setDatePreset('Custom');
+                    }} 
+                    align="right"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </motion.div>
-
-        {/* Filters Section */}
-        <motion.section 
-          layout
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="mb-[2rem] space-y-[1rem]"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-[1rem]">
-            <div className="relative">
-              <select 
-                className="w-full appearance-none pl-[1rem] pr-[2.5rem] py-[0.75rem] bg-white border-none rounded-[0.5rem] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#141414]/5 cursor-pointer text-[0.875rem]"
-                value={productFilter}
-                onChange={(e) => setProductFilter(e.target.value)}
-              >
-                {products.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-              <ChevronDown className="absolute right-[0.75rem] top-1/2 -translate-y-1/2 w-[1rem] h-[1rem] pointer-events-none opacity-40" />
-            </div>
-            <div className="relative">
-              <select 
-                className="w-full appearance-none pl-[1rem] pr-[2.5rem] py-[0.75rem] bg-white border-none rounded-[0.5rem] shadow-sm focus:outline-none focus:ring-2 focus:ring-[#141414]/5 cursor-pointer text-[0.875rem]"
-                value={datePreset}
-                onChange={(e) => handlePresetChange(e.target.value)}
-              >
-                <option value="All">All Time</option>
-                <option value="Last 7 Days">Last 7 Days</option>
-                <option value="This Month">This Month</option>
-                <option value="Last Month">Last Month</option>
-                <option value="Custom">Custom Range</option>
-              </select>
-              <ChevronDown className="absolute right-[0.75rem] top-1/2 -translate-y-1/2 w-[1rem] h-[1rem] pointer-events-none opacity-40" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-[1rem] w-full">
-            <ModernDatePicker 
-              label="From" 
-              value={dateRange.start} 
-              onChange={(date) => {
-                setDateRange(prev => ({ ...prev, start: date }));
-                setDatePreset('Custom');
-              }} 
-            />
-            <ModernDatePicker 
-              label="To" 
-              value={dateRange.end} 
-              onChange={(date) => {
-                setDateRange(prev => ({ ...prev, end: date }));
-                setDatePreset('Custom');
-              }} 
-            />
-          </div>
-        </motion.section>
 
         {/* Stats Grid */}
         <motion.section 
@@ -2182,7 +2204,7 @@ export default function App() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.8, ease: [0.21, 0.47, 0.32, 0.98] }}
-          className="mb-[2rem] relative z-10 overflow-visible"
+          className="mb-[2rem] relative z-40 overflow-visible"
         >
           <div className="bg-white p-[1rem] sm:p-[1.5rem] border border-[#141414]/10 rounded-[0.75rem] shadow-sm overflow-visible">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-[1rem] mb-[1.5rem]">
@@ -2306,7 +2328,7 @@ export default function App() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.8, ease: [0.21, 0.47, 0.32, 0.98] }}
-          className="mb-[2rem] relative z-10"
+          className="mb-[2rem] relative z-30"
         >
           <div className="bg-white p-[1rem] sm:p-[1.5rem] border border-[#141414]/10 rounded-[0.75rem] shadow-sm">
             <h3 className="font-bold text-[1.125rem] mb-[1.5rem]">Geographical Distribution</h3>
@@ -2323,7 +2345,7 @@ export default function App() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.8, ease: [0.21, 0.47, 0.32, 0.98] }}
-          className="bg-white border border-[#141414]/10 rounded-[0.75rem] shadow-sm overflow-hidden"
+          className="bg-white border border-[#141414]/10 rounded-[0.75rem] shadow-sm overflow-hidden relative z-20"
         >
           <div className="p-[1.5rem] border-b border-[#141414]/10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-[1rem]">
             <div className="flex flex-col sm:flex-row sm:items-center gap-[1rem] w-full lg:w-auto">
