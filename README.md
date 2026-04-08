@@ -2,6 +2,8 @@
 
 An interactive and professional dashboard for visualizing sales performance, product trends, and payment distributions. Built with React, Firebase, and Tailwind CSS.
 
+![SalesPulse Dashboard Overview](./image_14d5a2.png)
+
 ## 🚀 Features
 
 - **Real-time Analytics**: Live updates of sales data and performance metrics.
