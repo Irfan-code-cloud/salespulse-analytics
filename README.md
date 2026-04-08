@@ -2,9 +2,8 @@
 
 An interactive and professional dashboard for visualizing sales performance, product trends, and payment distributions. Built with React, Firebase, and Tailwind CSS.
 
-<img width="1366" height="768" alt="Screenshot (311)" src="https://github.com/user-attachments/assets/9532a004-c1f2-43b5-9c0e-744738a53930" />
-<img width="1366" height="768" alt="Screenshot (311)" src="https://github.com/user-attachments/assets/9532a004-c1f2-43b5-9c0e-744738a53930" />
-4d5a2.png)
+<img width="1366" height="768" alt="Screenshot (312)" src="https://github.com/user-attachments/assets/911eb0e5-0295-4333-ac4a-fb4a138b920d" />
+
 
 ## 🚀 Features
 
