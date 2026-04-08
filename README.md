@@ -85,5 +85,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙌 Acknowledgments
 
+- Developed by **Irfan Khattak** as a showcase of modern full-stack development.
 - Icons by [Lucide](https://lucide.dev/)
 - UI inspiration from modern SaaS dashboards.
