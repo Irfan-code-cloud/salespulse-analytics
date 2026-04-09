@@ -50,7 +50,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() &&
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "email" && request.auth.token.email_verified == true));
+          (request.auth.token.email == "kk9857853@gmail.com" && request.auth.token.email_verified == true));
     }
 
     function isValidEmail(email) {
@@ -63,6 +63,7 @@ service cloud.firestore {
              data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 50 &&
              (!('username' in data) || (data.username is string && data.username.size() >= 3 && data.username.size() <= 20)) &&
              (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 500000)) &&
+             (!('isVerified' in data) || data.isVerified is bool) &&
              data.email is string && isValidEmail(data.email) &&
              data.role in ['admin', 'user'];
     }
@@ -78,12 +79,29 @@ service cloud.firestore {
       // Users can create their own profile if it's valid
       allow create: if isOwner(userId) && isValidUser(request.resource.data);
       
-      // Users can update their own displayName, but not their role or email unless they are an admin
+      // Users can update their own profile
       allow update: if (isOwner(userId) && 
                         isValidUser(request.resource.data) && 
                         request.resource.data.role == resource.data.role &&
-                        request.resource.data.email == resource.data.email) || 
+                        request.resource.data.email == resource.data.email &&
+                        (
+                          // Case 1: Normal update (isVerified unchanged)
+                          (request.resource.data.isVerified == resource.data.isVerified) ||
+                          // Case 2: Verification update (requires valid code)
+                          (resource.data.isVerified == true && 
+                           resource.data.isVerified == false &&
+                           request.resource.data.verificationCode == get(/databases/$(database)/documents/verification_codes/$(userId)).data.code)
+                        )) || 
                        isAdmin();
+    }
+
+    match /verification_codes/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create, update: if (isOwner(userId) || isAdmin()) && 
+                              request.resource.data.keys().hasAll(['code', 'email', 'createdAt', 'expiresAt']) &&
+                              request.resource.data.code is string &&
+                              request.resource.data.code.size() == 6;
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     match /users/{userId}/tasks/{taskId} {
