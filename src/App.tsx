@@ -24,14 +24,16 @@ import {
 } from 'date-fns';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import { Order, RAW_DATA, parseData, CITIES } from './data';
+import { Order, parseData, CITIES } from './data';
 import firebaseConfigJson from '../firebase-applet-config.json';
 import { SalesMap } from './components/SalesMap';
 import { ModernDatePicker } from './components/ModernDatePicker';
+import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
 import { 
   auth, signInWithGoogle, logout, onAuthStateChanged, db, doc, onSnapshot, updateDoc,
   signUpWithEmail, loginWithEmail, collection, addDoc, deleteDoc, query, orderBy, serverTimestamp,
-  resetPassword, writeBatch, getDocs, getDoc, setDoc, handleFirestoreError, OperationType
+  resetPassword, writeBatch, getDocs, getDoc, setDoc, handleFirestoreError, OperationType,
+  sendVerificationCode, verifyCode
 } from './firebase';
 import { CheckCircle2, Circle, Plus, ListTodo } from 'lucide-react';
 
@@ -280,11 +282,15 @@ export default function App() {
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [verificationStep, setVerificationStep] = useState<'none' | 'pending'>('none');
+  const [enteredCode, setEnteredCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationPreviewUrl, setVerificationPreviewUrl] = useState<string | null>(null);
 
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [isOrdersLoading, setIsOrdersLoading] = useState(true);
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
-  const hasAttemptedSeed = useRef(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'parsing' | 'uploading' | 'completed' | 'error'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadSummary, setUploadSummary] = useState<{
@@ -300,6 +306,7 @@ export default function App() {
   const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
   const [isPickerApiLoaded, setIsPickerApiLoaded] = useState(false);
   const [isAuthInProgress, setIsAuthInProgress] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
   useEffect(() => {
     const loadGapi = () => {
@@ -504,77 +511,38 @@ export default function App() {
     const ordersRef = collection(db, 'users', user.uid, 'orders');
     const q = query(ordersRef, orderBy('date', 'desc'));
 
-    const unsubscribe = onSnapshot(ordersRef, async (snapshot) => {
-      if (snapshot.empty && !hasAttemptedSeed.current) {
-        hasAttemptedSeed.current = true;
-        // Check if we should seed (only if user hasn't seeded before)
-        try {
-          const userRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userRef);
-          
-          if (userDoc.exists() && userDoc.data().hasSeeded === false) {
-            console.log('Seeding initial data for new user...');
-            const initialData = parseData(RAW_DATA);
-            const batch = writeBatch(db);
-            initialData.forEach((order) => {
-              const newDocRef = doc(collection(db, 'users', user.uid, 'orders'));
-              batch.set(newDocRef, order);
-            });
-            
-            try {
-              await batch.commit();
-            } catch (error: any) {
-              if (error.message?.includes('quota') || error.message?.includes('resource-exhausted')) {
-                setIsQuotaExceeded(true);
-              }
-              throw error;
-            }
-            // Mark as seeded in the user profile
-            await updateDoc(userRef, { hasSeeded: true });
-            console.log('Initial data seeded successfully.');
-          } else {
-            // User has already seeded or explicitly cleared, so keep it empty
-            setAllOrders([]);
-            setIsOrdersLoading(false);
-          }
-        } catch (error: any) {
-          console.error('Error in orders listener (empty state):', error);
-          if (error.message?.includes('quota') || error.message?.includes('resource-exhausted')) {
-            setIsQuotaExceeded(true);
-          }
-          setAllOrders([]);
-          setIsOrdersLoading(false);
+    const unsubscribe = onSnapshot(ordersRef, (snapshot) => {
+      const orders = snapshot.docs.map(doc => {
+        const data = doc.data() as Order;
+        let date = data.date;
+        
+        // Sanitize date (handle Excel serial dates that might be in the DB)
+        if (date && !isNaN(Number(date)) && Number(date) > 30000) {
+          const excelDate = new Date((Number(date) - 25569) * 86400 * 1000);
+          date = format(excelDate, 'yyyy-MM-dd');
         }
-      } else {
-        const orders = snapshot.docs.map(doc => {
-          const data = doc.data() as Order;
-          let date = data.date;
-          
-          // Sanitize date (handle Excel serial dates that might be in the DB)
-          if (date && !isNaN(Number(date)) && Number(date) > 30000) {
-            const excelDate = new Date((Number(date) - 25569) * 86400 * 1000);
-            date = format(excelDate, 'yyyy-MM-dd');
-          }
-          
-          let timestamp = 0;
-          try {
-            timestamp = parseISO(date).getTime();
-          } catch (e) {
-            timestamp = 0;
-          }
+        
+        let timestamp = 0;
+        try {
+          timestamp = parseISO(date).getTime();
+        } catch (e) {
+          timestamp = 0;
+        }
 
-          return {
-            ...data,
-            date,
-            timestamp,
-            id: doc.id
-          };
-        });
-        setAllOrders(orders);
-        setIsOrdersLoading(false);
-      }
+        return {
+          ...data,
+          date,
+          timestamp,
+          id: doc.id
+        };
+      });
+      setAllOrders(orders);
+      setIsOrdersLoading(false);
     }, (error) => {
       console.error('Firestore Orders Error:', error);
+      if (error.message?.includes('quota') || error.message?.includes('resource-exhausted')) {
+        setIsQuotaExceeded(true);
+      }
       setIsOrdersLoading(false);
     });
 
@@ -1139,19 +1107,71 @@ export default function App() {
       if (authMode === 'signup') {
         if (!displayName.trim()) throw new Error('Please enter your name.');
         if (!username.trim()) throw new Error('Please enter a username.');
-        await signUpWithEmail(email, password, displayName, username);
+        const newUser = await signUpWithEmail(email, password, displayName, username);
+        if (newUser) {
+          const result = await sendVerificationCode(email, newUser.uid);
+          setVerificationPreviewUrl(result.previewUrl);
+          setVerificationStep('pending');
+        }
       } else {
-        await loginWithEmail(email, password);
+        const loggedInUser = await loginWithEmail(email, password);
+        // Check if user is verified
+        const userDoc = await getDoc(doc(db, 'users', loggedInUser.uid));
+        if (userDoc.exists() && userDoc.data().isVerified === false) {
+          await sendVerificationCode(email, loggedInUser.uid);
+          setVerificationStep('pending');
+        }
       }
     } catch (error: any) {
-      let msg = 'Authentication failed.';
-      if (error.code === 'auth/email-already-in-use') msg = 'This email is already in use. Try logging in instead.';
-      if (error.code === 'auth/invalid-credential') msg = 'Invalid email or password.';
-      if (error.code === 'auth/weak-password') msg = 'Password should be at least 6 characters.';
-      if (error.code === 'auth/operation-not-allowed') msg = 'Email/Password sign-in is not enabled in Firebase Console.';
+      let msg = 'Authentication failed. Please try again.';
+      if (error.code === 'auth/email-already-in-use') {
+        msg = 'This email is already registered. Please switch to "Log In" mode.';
+      } else if (error.code === 'auth/invalid-credential') {
+        msg = 'Incorrect email or password. If you are new here, please "Sign Up" first.';
+      } else if (error.code === 'auth/weak-password') {
+        msg = 'Password is too weak. Please use at least 6 characters.';
+      } else if (error.code === 'auth/user-not-found') {
+        msg = 'No account found with this email. Please sign up.';
+      } else if (error.code === 'auth/wrong-password') {
+        msg = 'Incorrect password. Please try again.';
+      } else if (error.message && error.message.includes('SMTP')) {
+        msg = 'Email service is not configured. Please check the "Secrets" in Settings.';
+      } else {
+        msg = error.message || msg;
+      }
       setAuthError(msg);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !enteredCode) return;
+    setIsVerifying(true);
+    setVerificationError(null);
+    try {
+      await verifyCode(user.uid, enteredCode);
+      setVerificationStep('none');
+      setToast({ message: 'Email verified successfully!', type: 'success' });
+    } catch (error: any) {
+      setVerificationError(error.message || 'Failed to verify code.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!user || !user.email) return;
+    setIsVerifying(true);
+    try {
+      const result = await sendVerificationCode(user.email, user.uid);
+      setVerificationPreviewUrl(result.previewUrl);
+      setToast({ message: 'Verification code resent!', type: 'success' });
+    } catch (error: any) {
+      setVerificationError('Failed to resend code.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -1186,12 +1206,91 @@ export default function App() {
     );
   }
 
+  if (user && (verificationStep === 'pending' || (userProfile && userProfile.isVerified === false))) {
+    return (
+      <div className="min-h-screen bg-[#E4E3E0] flex items-center justify-center p-[1rem]">
+        <motion.div 
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          className="bg-white p-[2rem] sm:p-[3rem] border border-[#141414]/10 rounded-[1.5rem] shadow-2xl max-w-[32rem] w-full"
+        >
+          <div className="text-center mb-[2rem]">
+            <div className="bg-[#141414] w-[3.5rem] h-[3.5rem] rounded-[1rem] flex items-center justify-center mx-auto mb-[1rem]">
+              <ShieldCheck className="w-[1.75rem] h-[1.75rem] text-white" />
+            </div>
+            <h1 className="text-[1.75rem] font-bold mb-[0.25rem]">Verify Your Email</h1>
+            <p className="text-[#141414]/60 text-[0.875rem]">
+              We've sent a 6-digit verification code to <span className="font-bold text-[#141414]">{user.email}</span>.
+            </p>
+          </div>
+
+          {verificationError && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="mb-[1.5rem] p-[0.75rem] bg-red-50 border border-red-100 rounded-[0.5rem] text-red-600 text-[0.8125rem] font-medium flex items-center gap-[0.5rem]"
+            >
+              <AlertCircle className="w-[1rem] h-[1rem]" />
+              {verificationError}
+            </motion.div>
+          )}
+
+          <form onSubmit={handleVerifyCode} className="space-y-[1.5rem]">
+            <div>
+              <label className="block text-[0.75rem] uppercase tracking-widest font-bold text-[#141414]/40 mb-[0.5rem]">
+                Verification Code
+              </label>
+              <input 
+                type="text" 
+                maxLength={6}
+                placeholder="000000" 
+                required
+                className="w-full px-[1rem] py-[1rem] bg-[#141414]/5 border border-transparent rounded-[0.75rem] focus:ring-2 focus:ring-[#141414]/10 focus:outline-none font-mono text-[2rem] text-center tracking-[0.5rem] transition-all"
+                value={enteredCode}
+                onChange={(e) => setEnteredCode(e.target.value.replace(/[^0-9]/g, ''))}
+              />
+            </div>
+
+            <button 
+              type="submit"
+              disabled={isVerifying || enteredCode.length !== 6}
+              className="w-full py-[1rem] bg-[#141414] text-white rounded-[0.75rem] font-bold hover:opacity-90 transition-all active:scale-[0.98] shadow-lg disabled:opacity-50"
+            >
+              {isVerifying ? 'Verifying...' : 'Verify Email'}
+            </button>
+          </form>
+
+          <div className="mt-[2rem] flex flex-col gap-[1rem] text-center">
+            <button 
+              onClick={handleResendCode}
+              disabled={isVerifying}
+              className="text-[0.875rem] font-bold text-[#141414]/60 hover:text-[#141414] transition-colors"
+            >
+              Didn't receive the code? Resend
+            </button>
+            <button 
+              onClick={() => {
+                logout();
+                setVerificationStep('none');
+              }}
+              className="text-[0.875rem] font-bold text-red-600/60 hover:text-red-600 transition-colors"
+            >
+              Back to Login
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen bg-[#E4E3E0] flex items-center justify-center p-[1rem]">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
           className="bg-white p-[2rem] sm:p-[3rem] border border-[#141414]/10 rounded-[1.5rem] shadow-2xl max-w-[32rem] w-full"
         >
           <div className="text-center mb-[2rem]">
@@ -1307,7 +1406,7 @@ export default function App() {
             {isAuthInProgress ? 'Signing in...' : 'Google'}
           </button>
           
-          <div className="mt-[2rem] text-center">
+          <div className="mt-[2rem] text-center flex flex-col gap-[0.5rem]">
             <button 
               onClick={() => {
                 setAuthMode(authMode === 'login' ? 'signup' : 'login');
@@ -1317,7 +1416,14 @@ export default function App() {
             >
               {authMode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
             </button>
+            <button 
+              onClick={() => setIsPrivacyModalOpen(true)}
+              className="text-[0.75rem] font-bold text-[#141414]/40 hover:text-[#141414] transition-colors"
+            >
+              Privacy Policy
+            </button>
           </div>
+          <PrivacyPolicyModal isOpen={isPrivacyModalOpen} onClose={() => setIsPrivacyModalOpen(false)} />
         </motion.div>
       </div>
     );
