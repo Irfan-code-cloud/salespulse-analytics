@@ -205,13 +205,92 @@ export const signUpWithEmail = async (email: string, pass: string, name: string,
       username: username,
       email: user.email,
       role: 'admin',
+      isVerified: false, // New field for code verification
       createdAt: serverTimestamp(),
-      hasSeeded: false,
     });
     
     return user;
   } catch (error) {
     console.error('Error signing up with email:', error);
+    throw error;
+  }
+};
+
+export const sendVerificationCode = async (email: string, uid: string) => {
+  try {
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store in Firestore
+    const codeRef = doc(db, 'verification_codes', uid);
+    await setDoc(codeRef, {
+      code,
+      email,
+      createdAt: serverTimestamp(),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    });
+
+    // Send via API
+    const response = await fetch('/api/send-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to send verification email');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending verification code:', error);
+    throw error;
+  }
+};
+
+export const verifyCode = async (uid: string, enteredCode: string) => {
+  try {
+    // 1. Get the code from the database (user has read permission for their own code)
+    const codeRef = doc(db, 'verification_codes', uid);
+    const codeDoc = await getDoc(codeRef);
+
+    if (!codeDoc.exists()) {
+      throw new Error('Verification code not found. Please request a new one.');
+    }
+
+    const data = codeDoc.data();
+    const now = new Date();
+    const expiresAt = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+
+    if (now > expiresAt) {
+      throw new Error('Verification code has expired. Please request a new one.');
+    }
+
+    if (data.code !== enteredCode) {
+      throw new Error('Invalid verification code. Please check and try again.');
+    }
+
+    // 2. Update the user document (Rules will verify the code matches)
+    const userRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      throw new Error('User profile not found.');
+    }
+
+    await updateDoc(userRef, {
+      ...userDoc.data(),
+      isVerified: true,
+      verificationCode: enteredCode // Passed to rules for validation
+    });
+
+    // 3. Delete the code document
+    await deleteDoc(codeRef);
+
+    return true;
+  } catch (error: any) {
+    console.error('Error verifying code:', error);
     throw error;
   }
 };
