@@ -2,6 +2,8 @@
 
 An interactive and professional dashboard for visualizing sales performance, product trends, and payment distributions. Built with React, Firebase, and Tailwind CSS.
 
+### [🚀 View Live Demo](https://salespulse-analytics.vercel.app/)
+
 <img width="1366" height="768" alt="Screenshot (312)" src="https://github.com/user-attachments/assets/911eb0e5-0295-4333-ac4a-fb4a138b920d" />
 
 <img width="1366" height="768" alt="Screenshot (313)" src="https://github.com/user-attachments/assets/a04dcb64-1a97-45ee-88ca-47bd4fa18f00" />
