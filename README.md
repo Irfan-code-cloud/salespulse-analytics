@@ -1,3 +1,5 @@
+![Vercel Deployment](https://img.shields.io/badge/Vercel-Live-brightgreen?logo=vercel)
+
 # SalesPulse Analytics Dashboard
 
 An interactive and professional dashboard for visualizing sales performance, product trends, and payment distributions. Built with React, Firebase, and Tailwind CSS.
