@@ -28,7 +28,6 @@ import { Order, parseData, CITIES } from './data';
 import firebaseConfigJson from '../firebase-applet-config.json';
 import { SalesMap } from './components/SalesMap';
 import { ModernDatePicker } from './components/ModernDatePicker';
-import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
 import { 
   auth, signInWithGoogle, logout, onAuthStateChanged, db, doc, onSnapshot, updateDoc,
   signUpWithEmail, loginWithEmail, collection, addDoc, deleteDoc, query, orderBy, serverTimestamp,
@@ -306,7 +305,6 @@ export default function App() {
   const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
   const [isPickerApiLoaded, setIsPickerApiLoaded] = useState(false);
   const [isAuthInProgress, setIsAuthInProgress] = useState(false);
-  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
   useEffect(() => {
     const loadGapi = () => {
@@ -1298,8 +1296,11 @@ export default function App() {
               <TrendingUp className="w-[1.75rem] h-[1.75rem] text-white" />
             </div>
             <h1 className="text-[1.75rem] font-bold mb-[0.25rem]">SalesPulse</h1>
-            <p className="text-[#141414]/60 text-[0.875rem]">
+            <p className="text-[#141414]/60 text-[0.875rem] mb-[0.5rem]">
               {authMode === 'login' ? 'Welcome back. Please log in.' : 'Create your account to get started.'}
+            </p>
+            <p className="text-[#141414]/50 text-[0.75rem] max-w-[24rem] mx-auto leading-relaxed mb-[1rem]">
+              SalesPulse is a local analytics tool that allows users to import and visualize sales data from CSVs and Google Drive without uploading files to any external servers.
             </p>
           </div>
           
@@ -1416,14 +1417,15 @@ export default function App() {
             >
               {authMode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
             </button>
-            <button 
-              onClick={() => setIsPrivacyModalOpen(true)}
-              className="text-[0.75rem] font-bold text-[#141414]/40 hover:text-[#141414] transition-colors"
+            <a 
+              href="/privacy.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[0.75rem] font-bold text-[#141414]/40 hover:text-[#141414] transition-colors inline-block pt-[0.25rem]"
             >
               Privacy Policy
-            </button>
+            </a>
           </div>
-          <PrivacyPolicyModal isOpen={isPrivacyModalOpen} onClose={() => setIsPrivacyModalOpen(false)} />
         </motion.div>
       </div>
     );
